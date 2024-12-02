@@ -1,0 +1,75 @@
+                           # Pegar duração e formante das vogais #
+
+
+
+# no script do Praat tem que colocar $ para as variaveis que são strings
+
+
+#Selecione o áudio e o TextGrid no Praat Objects e então rode o script
+
+
+writeInfoLine: "Extracting formants..."
+
+#Creat output file and write the first line
+outputPath$ = "C:/Users/navar/Desktop/formants.csv"
+writeFileLine: "'outputPath$'", "file,time,word,phoneme,next phoneme,duration,F1,F2,F3"
+
+thisSound$ = selected$("Sound")
+thisTextGrid$ = selected$("TextGrid")
+
+select TextGrid 'thisTextGrid$'
+numberOfPhonemes = Get number of intervals: 2  
+# assumed Tier 2 
+
+# Creat formant object
+# Adjust the max formant settings (second and third values) depending on the speaker
+# max 5000 for men, max 5500 for women -- mude em To Formant abaixo
+select Sound 'thisSound$'
+To Formant (burg)... 0 5 5000 0.025 50
+
+# se não colocae -1 da problema, mas vai perder a ultima vogal?
+for thisInterval from 1 to numberOfPhonemes - 1
+
+	# Get label of interval
+	select TextGrid 'thisTextGrid$'
+	thisPhoneme$ = Get label of interval: 2, thisInterval
+
+	#Find out if the phoneme is a vowel; if so, proceed -- colocar resto dos simbolos de vogal -- ou só o que vc estiver buscando
+	if index_regex(thisPhoneme$, "(a|e|i|o|u|ɔ|ɛ)")	
+
+	nextPhoneme$ = Get label of interval: 2, thisInterval + 1
+
+	#Find the midpoint (para ditongos não é muito interessante o meio)
+	thisPhonemeStartTime = Get start point: 2, thisInterval
+	thisPhonemeEndTime = Get end point: 2, thisInterval
+	duration = thisPhonemeEndTime - thisPhonemeStartTime
+	midpoint = thisPhonemeStartTime + duration/2
+
+	#Get the label on the word tier for this phoneme
+	thisWordInterval = Get interval at time: 1, midpoint
+	thisWord$ = Get label of interval: 1, thisWordInterval
+
+	#Extract formant measurements
+	select Formant 'thisSound$'
+	f1 = Get value at time... 1 midpoint Hertz Linear
+	f2 = Get value at time... 2 midpoint Hertz Linear
+	f3 = Get value at time... 3 midpoint Hertz Linear
+
+	#Save to spreadsheet
+	appendFileLine: "'outputPath$'",
+			...thisSound$,",",
+			...midpoint,",",
+			...thisWord$,",",
+			...thisPhoneme$,",",
+			...nextPhoneme$,",",
+			...duration,",",
+			...f1,",",
+			...f2,",",
+			...f3 
+endif
+endfor
+
+appendInfoLine: "There are ", numberOfPhonemes, " intervals"
+appendInfoLine: newline$, newline$, "Yay it worked! :)"
+
+#o spreadsheet gerado tem que ser importado no excel para uft8 e virgula como separação
